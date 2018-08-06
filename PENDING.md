@@ -61,6 +61,7 @@ FEATURES
 * [core] added BaseApp.Seal - ability to seal baseapp parameters once they've been set
 * [scripts] added log output monitoring to DataDog using Ansible scripts
 * [gov] added TallyResult type that gets added stored in Proposal after tallying is finished
+* [querier] added custom querier functionality, so ABCI query requests can be handled by keepers
 
 IMPROVEMENTS
 * [baseapp] Allow any alphanumeric character in route

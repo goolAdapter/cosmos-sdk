@@ -29,7 +29,7 @@ func (keeper Keeper) update(ctx sdk.Context, val sdk.Validator, valset sdk.Valid
 		store := ctx.KVStore(keeper.key)
 		iter := sdk.KVStorePrefixIterator(store, prefix)
 		for ; iter.Valid(); iter.Next() {
-			if valset.Validator(ctx, iter.Value()) != nil {
+			if valset.Validator(ctx, iter.Value()) == nil {
 				store.Delete(iter.Key())
 				continue
 			}

@@ -220,3 +220,63 @@ func TestOracle(t *testing.T) {
 	require.True(t, res.IsOK())
 	require.Equal(t, 3, getSequence(ctx, key))
 }
+
+func TestOracleValidatorChange(t *testing.T) {
+	cdc := makeCodec()
+
+	addr1 := []byte("addr1")
+	addr2 := []byte("addr2")
+	addr3 := []byte("addr3")
+	addr4 := []byte("addr4")
+	addr5 := []byte("addr5")
+	valset := &mock.ValidatorSet{[]mock.Validator{
+		{addr1, sdk.NewDec(7)},
+		{addr2, sdk.NewDec(7)},
+		{addr3, sdk.NewDec(7)},
+		{addr4, sdk.NewDec(7)},
+	}}
+
+	key := sdk.NewKVStoreKey("testkey")
+	ctx := defaultContext(key)
+
+	bz, err := json.Marshal(valset)
+	require.Nil(t, err)
+	ctx = ctx.WithBlockHeader(abci.Header{ValidatorsHash: bz})
+
+	ork := NewKeeper(key, cdc, valset, sdk.NewDecWithPrec(667, 3), 100) // 66.7%
+	h := seqHandler(ork, key, sdk.CodespaceRoot)
+
+	// Less than 2/3 signed, msg not processed
+	msg := Msg{seqOracle{0, 1}, addr1}
+	res := h(ctx, msg)
+	require.True(t, res.IsOK())
+	require.Equal(t, 0, getSequence(ctx, key))
+
+	// Less than 2/3 signed, msg not processed
+	msg.Signer = addr2
+	res = h(ctx, msg)
+	require.True(t, res.IsOK())
+	require.Equal(t, 0, getSequence(ctx, key))
+
+	// Should handle mock.Validator set change
+	valset.AddValidator(mock.Validator{addr5, sdk.NewDec(7)})
+	bz, err = json.Marshal(valset)
+	require.Nil(t, err)
+	ctx = ctx.WithBlockHeader(abci.Header{ValidatorsHash: bz})
+
+	// Already processed, transaction failed
+	msg.Signer = addr3
+	res = h(ctx, msg)
+	require.True(t, res.IsOK())
+	require.Equal(t, 0, getSequence(ctx, key))
+
+	msg.Signer = addr4
+	res = h(ctx, msg)
+	require.True(t, res.IsOK())
+	require.Equal(t, 1, getSequence(ctx, key))
+
+	msg.Signer = addr5
+	res = h(ctx, msg)
+	require.False(t, res.IsOK())
+	require.Equal(t, 1, getSequence(ctx, key))
+}

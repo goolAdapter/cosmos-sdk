@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/examples/basecoin/types"
+	"github.com/cosmos/cosmos-sdk/examples/lottery/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -60,9 +60,9 @@ func NewLotteryApp(logger log.Logger, db dbm.DB, baseAppOptions ...func(*bam.Bas
 			return &types.AppAccount{}
 		},
 	)
-	// // register message routes
-	// app.Router().
-	// 	AddRoute("lottery", bank.NewHandler(app.coinKeeper))
+	// register message routes
+	app.Router().
+		AddRoute("lottery", types.NewHandler())
 
 	// perform initialization logic
 	app.SetInitChainer(app.initChainer)

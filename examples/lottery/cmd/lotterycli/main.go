@@ -8,11 +8,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/lcd"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/client/tx"
+	"github.com/cosmos/cosmos-sdk/examples/lottery"
 	"github.com/cosmos/cosmos-sdk/examples/lottery/app"
-	"github.com/cosmos/cosmos-sdk/examples/lottery/types"
+	lotterycmd "github.com/cosmos/cosmos-sdk/examples/lottery/cli"
 	"github.com/cosmos/cosmos-sdk/version"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
-	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	"github.com/spf13/cobra"
 	"github.com/tendermint/tendermint/libs/cli"
 )
@@ -45,12 +45,12 @@ func main() {
 	// add query/post commands (custom to binary)
 	rootCmd.AddCommand(
 		client.GetCommands(
-			authcmd.GetAccountCmd("acc", cdc, types.GetAccountDecoder(cdc)),
+			authcmd.GetAccountCmd("acc", cdc, lottery.GetAccountDecoder(cdc)),
 		)...)
 
 	rootCmd.AddCommand(
 		client.PostCommands(
-			bankcmd.SendTxCmd(cdc),
+			lotterycmd.SetupCmd(cdc),
 		)...)
 
 	// add proxy, version and key info
@@ -63,7 +63,7 @@ func main() {
 	)
 
 	// prepare and add flags
-	executor := cli.PrepareMainCmd(rootCmd, "LT", os.ExpandEnv("$HOME/.lottery"))
+	executor := cli.PrepareMainCmd(rootCmd, "LT", os.ExpandEnv("$HOME/.lotterycli"))
 	err := executor.Execute()
 	if err != nil {
 		// Note: Handle with #870

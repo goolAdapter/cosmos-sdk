@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/examples/lottery/types"
+	"github.com/cosmos/cosmos-sdk/examples/lottery"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -33,6 +33,7 @@ type LotteryApp struct {
 
 	// manage getting and setting accounts
 	accountMapper auth.AccountMapper
+	lotteryKeeper lottery.LotteryKeeper
 }
 
 // NewLotteryApp returns a reference to a new LotteryApp given a logger and
@@ -57,12 +58,15 @@ func NewLotteryApp(logger log.Logger, db dbm.DB, baseAppOptions ...func(*bam.Bas
 		cdc,
 		app.keyAccount, // target store
 		func() auth.Account {
-			return &types.AppAccount{}
+			return &lottery.AppAccount{}
 		},
 	)
+
+	app.lotteryKeeper = lottery.NewLotteryKeeper(cdc, app.keyMain)
+
 	// register message routes
 	app.Router().
-		AddRoute("lottery", types.NewHandler())
+		AddRoute(lottery.MsgTypeName, lottery.NewHandler(app.lotteryKeeper))
 
 	// perform initialization logic
 	app.SetInitChainer(app.initChainer)
@@ -90,8 +94,10 @@ func MakeCodec() *wire.Codec {
 	sdk.RegisterWire(cdc)
 	auth.RegisterWire(cdc)
 
+	lottery.RegisterWire(cdc)
+
 	// register custom type
-	cdc.RegisterConcrete(&types.AppAccount{}, "lottery/Account", nil)
+	cdc.RegisterConcrete(&lottery.AppAccount{}, "lottery/Account", nil)
 
 	cdc.Seal()
 
@@ -118,7 +124,7 @@ func (app *LotteryApp) EndBlocker(_ sdk.Context, _ abci.RequestEndBlock) abci.Re
 func (app *LotteryApp) initChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
 	stateJSON := req.AppStateBytes
 
-	genesisState := new(types.GenesisState)
+	genesisState := new(lottery.GenesisState)
 	err := app.cdc.UnmarshalJSON(stateJSON, genesisState)
 	if err != nil {
 		// TODO: https://github.com/cosmos/cosmos-sdk/issues/468
@@ -144,10 +150,10 @@ func (app *LotteryApp) initChainer(ctx sdk.Context, req abci.RequestInitChain) a
 // returned if any step getting the state or set of validators fails.
 func (app *LotteryApp) ExportAppStateAndValidators() (appState json.RawMessage, validators []tmtypes.GenesisValidator, err error) {
 	ctx := app.NewContext(true, abci.Header{})
-	accounts := []*types.GenesisAccount{}
+	accounts := []*lottery.GenesisAccount{}
 
 	appendAccountsFn := func(acc auth.Account) bool {
-		account := &types.GenesisAccount{
+		account := &lottery.GenesisAccount{
 			Address: acc.GetAddress(),
 			Coins:   acc.GetCoins(),
 		}
@@ -158,7 +164,7 @@ func (app *LotteryApp) ExportAppStateAndValidators() (appState json.RawMessage, 
 
 	app.accountMapper.IterateAccounts(ctx, appendAccountsFn)
 
-	genState := types.GenesisState{Accounts: accounts}
+	genState := lottery.GenesisState{Accounts: accounts}
 	appState, err = wire.MarshalJSONIndent(app.cdc, genState)
 	if err != nil {
 		return nil, nil, err

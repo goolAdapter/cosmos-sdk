@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/examples/lottery"
 	"github.com/cosmos/cosmos-sdk/examples/lottery/app"
 	lotterycmd "github.com/cosmos/cosmos-sdk/examples/lottery/cli"
+	votercmd "github.com/cosmos/cosmos-sdk/examples/lottery/voter/cli"
 	"github.com/cosmos/cosmos-sdk/version"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	"github.com/spf13/cobra"
@@ -51,6 +52,7 @@ func main() {
 	rootCmd.AddCommand(
 		client.PostCommands(
 			lotterycmd.SetupCmd(cdc),
+			votercmd.CreateVoterCmd(cdc),
 		)...)
 
 	// add proxy, version and key info

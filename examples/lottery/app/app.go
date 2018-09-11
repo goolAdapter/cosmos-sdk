@@ -3,6 +3,8 @@ package app
 import (
 	"encoding/json"
 
+	"github.com/cosmos/cosmos-sdk/examples/lottery/voter"
+
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/examples/lottery"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -34,6 +36,8 @@ type LotteryApp struct {
 	// manage getting and setting accounts
 	accountMapper auth.AccountMapper
 	lotteryKeeper lottery.LotteryKeeper
+
+	voterKeeper voter.VoterKeeper
 }
 
 // NewLotteryApp returns a reference to a new LotteryApp given a logger and
@@ -64,9 +68,12 @@ func NewLotteryApp(logger log.Logger, db dbm.DB, baseAppOptions ...func(*bam.Bas
 
 	app.lotteryKeeper = lottery.NewLotteryKeeper(cdc, app.keyMain)
 
+	app.voterKeeper = voter.NewVoterKeeper(cdc, app.keyMain)
+
 	// register message routes
 	app.Router().
-		AddRoute(lottery.MsgTypeName, lottery.NewHandler(app.lotteryKeeper))
+		AddRoute(lottery.MsgTypeName, lottery.NewHandler(app.lotteryKeeper)).
+		AddRoute(voter.MsgTypeName, voter.NewHandler(app.voterKeeper))
 
 	// perform initialization logic
 	app.SetInitChainer(app.initChainer)
@@ -95,6 +102,7 @@ func MakeCodec() *wire.Codec {
 	auth.RegisterWire(cdc)
 
 	lottery.RegisterWire(cdc)
+	voter.RegisterWire(cdc)
 
 	// register custom type
 	cdc.RegisterConcrete(&lottery.AppAccount{}, "lottery/Account", nil)

@@ -7,6 +7,7 @@ import (
 // Register concrete types on wire codec for default AppAccount
 func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(MsgSetupLottery{}, "lottery/MsgSetupLottery", nil)
+	cdc.RegisterConcrete(MsgStartLotteryRound{}, "lottery/MsgStartLotteryRound", nil)
 }
 
 var msgCdc = wire.NewCodec()

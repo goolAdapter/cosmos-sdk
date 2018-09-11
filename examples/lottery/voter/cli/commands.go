@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	flagMemo = "memo"
+	flagVoterMemo = "votermemo"
 )
 
 func CreateVoterCmd(cdc *wire.Codec) *cobra.Command {
@@ -37,7 +37,7 @@ func CreateVoterCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			memo := viper.GetString(flagMemo)
+			memo := viper.GetString(flagVoterMemo)
 
 			msg := voter.NewMsgCreateVoter(from, memo)
 
@@ -46,7 +46,7 @@ func CreateVoterCmd(cdc *wire.Codec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String(flagMemo, "", "voter's description")
+	cmd.Flags().String(flagVoterMemo, "", "voter's description")
 	return cmd
 }
 

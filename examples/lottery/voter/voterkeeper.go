@@ -27,12 +27,12 @@ func NewVoterKeeper(cdc *wire.Codec, key sdk.StoreKey) VoterKeeper {
 	}
 }
 
-// Turn an address to key used to get it from the account store
+// Turn an address to key used to get it from the voter store
 func AddressStoreKey(addr sdk.AccAddress) []byte {
 	return append(VoterPrefixKey, addr.Bytes()...)
 }
 
-func (ak VoterKeeper) GetAccount(ctx sdk.Context, addr sdk.AccAddress) (Voter, error) {
+func (ak VoterKeeper) GetVoter(ctx sdk.Context, addr sdk.AccAddress) (Voter, error) {
 	store := ctx.KVStore(ak.key)
 	bz := store.Get(AddressStoreKey(addr))
 	if bz == nil {
@@ -43,14 +43,19 @@ func (ak VoterKeeper) GetAccount(ctx sdk.Context, addr sdk.AccAddress) (Voter, e
 	return ac, nil
 }
 
-func (ak VoterKeeper) SetAccount(ctx sdk.Context, ac Voter) {
+func (ak VoterKeeper) SetVoter(ctx sdk.Context, ac Voter) {
 	addr := ac.GetAddress()
 	store := ctx.KVStore(ak.key)
 	bz := MustMarshalVoter(ak.cdc, ac)
 	store.Set(AddressStoreKey(addr), bz)
 }
 
-func (ak VoterKeeper) IterateAccounts(ctx sdk.Context, process func(Voter) (stop bool)) {
+func (ak VoterKeeper) DeleteVoter(ctx sdk.Context, addr sdk.AccAddress) {
+	store := ctx.KVStore(ak.key)
+	store.Delete(AddressStoreKey(addr))
+}
+
+func (ak VoterKeeper) IterateVoters(ctx sdk.Context, process func(Voter) (stop bool)) {
 	store := ctx.KVStore(ak.key)
 	iter := sdk.KVStorePrefixIterator(store, VoterPrefixKey)
 	defer iter.Close()

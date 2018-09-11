@@ -57,8 +57,8 @@ func MustUnmarshalVoter(cdc *wire.Codec, ownerAddr, value []byte) Voter {
 
 // unmarshal a redelegation from a store key and value
 func UnmarshalVoter(cdc *wire.Codec, ownerAddr, value []byte) (v Voter, err error) {
-	var storeValue Voter
-	err = cdc.UnmarshalBinary(value, &storeValue)
+	var val voterValue
+	err = cdc.UnmarshalBinary(value, &val)
 	if err != nil {
 		return
 	}
@@ -70,7 +70,7 @@ func UnmarshalVoter(cdc *wire.Codec, ownerAddr, value []byte) (v Voter, err erro
 
 	return Voter{
 		Address: ownerAddr,
-		Memo:    storeValue.Memo,
+		Memo:    val.Memo,
 	}, nil
 }
 

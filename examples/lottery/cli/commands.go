@@ -62,8 +62,8 @@ func SetupCmd(cdc *wire.Codec) *cobra.Command {
 }
 
 const (
-	flagNumber = "number"
-	flagMemo   = "memo"
+	flagNumber    = "number"
+	flagRoundMemo = "roundmemo"
 )
 
 func RoundCmd(cdc *wire.Codec) *cobra.Command {
@@ -82,7 +82,7 @@ func RoundCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			memo := viper.GetString(flagMemo)
+			memo := viper.GetString(flagRoundMemo)
 
 			num := viper.GetInt64(flagNumber)
 			if num <= 0 {
@@ -98,7 +98,7 @@ func RoundCmd(cdc *wire.Codec) *cobra.Command {
 	}
 
 	cmd.Flags().Int64(flagNumber, 0, "how many prize number to generate on this round")
-	cmd.Flags().String(flagMemo, "", "memo to this round")
+	cmd.Flags().String(flagRoundMemo, "", "memo to this round")
 
 	return cmd
 }

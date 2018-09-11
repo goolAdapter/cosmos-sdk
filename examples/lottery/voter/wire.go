@@ -7,6 +7,7 @@ import (
 // Register concrete types on wire codec for default AppAccount
 func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(MsgCreateVoter{}, "voter/MsgCreateVoter", nil)
+	cdc.RegisterConcrete(MsgRevocationVoter{}, "voter/MsgRevocationVoter", nil)
 }
 
 var msgCdc = wire.NewCodec()

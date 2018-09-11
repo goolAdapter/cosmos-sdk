@@ -47,12 +47,14 @@ func main() {
 	rootCmd.AddCommand(
 		client.GetCommands(
 			authcmd.GetAccountCmd("acc", cdc, lottery.GetAccountDecoder(cdc)),
+			votercmd.GetCmdQueryVoters("main", cdc),
 		)...)
 
 	rootCmd.AddCommand(
 		client.PostCommands(
 			lotterycmd.SetupCmd(cdc),
 			votercmd.CreateVoterCmd(cdc),
+			votercmd.RevocationVoterCmd(cdc),
 		)...)
 
 	// add proxy, version and key info

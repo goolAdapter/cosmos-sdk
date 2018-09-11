@@ -23,7 +23,7 @@ func NewHandler(k VoterKeeper) sdk.Handler {
 }
 
 func handleMsgCreateVoter(ctx sdk.Context, k VoterKeeper, msg MsgCreateVoter) sdk.Result {
-	ac := NewVoter(msg.Address)
+	ac := NewVoter(msg.Address, msg.Memo)
 	k.SetAccount(ctx, ac)
 
 	return sdk.Result{}

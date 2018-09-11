@@ -7,6 +7,10 @@ import (
 	wire "github.com/cosmos/cosmos-sdk/wire"
 )
 
+var (
+	VoterPrefixKey = []byte{0x02}
+)
+
 type VoterKeeper struct {
 
 	// The (unexposed) key used to access the store from the Context.
@@ -25,7 +29,7 @@ func NewVoterKeeper(cdc *wire.Codec, key sdk.StoreKey) VoterKeeper {
 
 // Turn an address to key used to get it from the account store
 func AddressStoreKey(addr sdk.AccAddress) []byte {
-	return append([]byte("voter:"), addr.Bytes()...)
+	return append(VoterPrefixKey, addr.Bytes()...)
 }
 
 func (ak VoterKeeper) GetAccount(ctx sdk.Context, addr sdk.AccAddress) (Voter, error) {
@@ -35,43 +39,26 @@ func (ak VoterKeeper) GetAccount(ctx sdk.Context, addr sdk.AccAddress) (Voter, e
 		return Voter{}, fmt.Errorf("%v 's Voter not exist", addr)
 	}
 
-	ac := ak.decodevoter(bz)
+	ac := MustUnmarshalVoter(ak.cdc, addr, bz)
 	return ac, nil
 }
 
 func (ak VoterKeeper) SetAccount(ctx sdk.Context, ac Voter) {
 	addr := ac.GetAddress()
 	store := ctx.KVStore(ak.key)
-	bz := ak.encodevoter(ac)
+	bz := MustMarshalVoter(ak.cdc, ac)
 	store.Set(AddressStoreKey(addr), bz)
 }
 
 func (ak VoterKeeper) IterateAccounts(ctx sdk.Context, process func(Voter) (stop bool)) {
 	store := ctx.KVStore(ak.key)
-	iter := sdk.KVStorePrefixIterator(store, []byte("voter:"))
+	iter := sdk.KVStorePrefixIterator(store, VoterPrefixKey)
 	defer iter.Close()
 
 	for ; !iter.Valid(); iter.Next() {
-		val := iter.Value()
-		acc := ak.decodevoter(val)
+		acc := MustUnmarshalVoter(ak.cdc, iter.Key()[1:], iter.Value())
 		if process(acc) {
 			return
 		}
 	}
-}
-
-func (ak VoterKeeper) encodevoter(ac Voter) []byte {
-	bz, err := ak.cdc.MarshalBinaryBare(ac)
-	if err != nil {
-		panic(err)
-	}
-	return bz
-}
-
-func (ak VoterKeeper) decodevoter(bz []byte) (ac Voter) {
-	err := ak.cdc.UnmarshalBinaryBare(bz, &ac)
-	if err != nil {
-		panic(err)
-	}
-	return
 }

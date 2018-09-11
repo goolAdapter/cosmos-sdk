@@ -6,8 +6,9 @@ import (
 )
 
 var (
-	sequenceKey = []byte("sequence")
-	statusKey   = []byte("status")
+	LotteryPrefixKey = []byte{0x01}
+	sequenceKey      = []byte("sequence")
+	statusKey        = []byte("status")
 )
 
 const (
@@ -122,7 +123,7 @@ func (lk LotteryKeeper) clearInfo(ctx sdk.Context, address sdk.AccAddress) {
 }
 
 func GetInfoPrefix(address sdk.AccAddress, cdc *wire.Codec) []byte {
-	return append([]byte{0x00}, address...)
+	return append(LotteryPrefixKey, address...)
 }
 
 func GetInfoSetupKey(address sdk.AccAddress, cdc *wire.Codec) []byte {

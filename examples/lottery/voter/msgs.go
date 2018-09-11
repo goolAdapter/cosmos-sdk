@@ -8,7 +8,7 @@ import (
 
 const MsgTypeName string = "voter"
 
-//MsgCreatevoter create a voter
+//MsgCreateVoter create a voter
 var _ sdk.Msg = MsgCreateVoter{}
 
 type MsgCreateVoter struct {
@@ -35,6 +35,39 @@ func (msg MsgCreateVoter) ValidateBasic() sdk.Error {
 }
 
 func (msg MsgCreateVoter) GetSignBytes() []byte {
+	bz, err := json.Marshal(msg)
+	if err != nil {
+		panic(err)
+	}
+
+	return sdk.MustSortJSON(bz)
+}
+
+//MsgRevocationVoter revocation a voter
+var _ sdk.Msg = MsgRevocationVoter{}
+
+type MsgRevocationVoter struct {
+	Address sdk.AccAddress `json:"address"`
+}
+
+func NewMsgRevocationVoter(addr sdk.AccAddress) MsgRevocationVoter {
+	return MsgRevocationVoter{
+		Address: addr,
+	}
+}
+
+func (msg MsgRevocationVoter) Type() string                 { return MsgTypeName }
+func (msg MsgRevocationVoter) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.Address} }
+
+func (msg MsgRevocationVoter) ValidateBasic() sdk.Error {
+	if msg.Address == nil {
+		return sdk.ErrInvalidAddress("MsgRevocationVoter.Address must not be empty")
+	}
+
+	return nil
+}
+
+func (msg MsgRevocationVoter) GetSignBytes() []byte {
 	bz, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)

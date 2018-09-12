@@ -38,6 +38,10 @@ func CreateVoterCmd(cdc *wire.Codec) *cobra.Command {
 			}
 
 			memo := viper.GetString(flagVoterMemo)
+			if len(memo) > 1024 {
+				err = fmt.Errorf("flag %s too long, must less 1024.", flagVoterMemo)
+				return err
+			}
 
 			msg := voter.NewMsgCreateVoter(from, memo)
 

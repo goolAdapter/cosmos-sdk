@@ -34,8 +34,9 @@ type LotteryApp struct {
 	keyAccount *sdk.KVStoreKey
 
 	// manage getting and setting accounts
-	accountMapper auth.AccountMapper
-	lotteryKeeper lottery.LotteryKeeper
+	accountMapper       auth.AccountMapper
+	lotteryKeeper       lottery.LotteryKeeper
+	feeCollectionKeeper auth.FeeCollectionKeeper
 
 	voterKeeper voter.VoterKeeper
 }
@@ -66,9 +67,9 @@ func NewLotteryApp(logger log.Logger, db dbm.DB, baseAppOptions ...func(*bam.Bas
 		},
 	)
 
-	app.lotteryKeeper = lottery.NewLotteryKeeper(cdc, app.keyMain)
+	app.voterKeeper = voter.NewVoterKeeper(cdc, app.keyMain, app.accountMapper)
 
-	app.voterKeeper = voter.NewVoterKeeper(cdc, app.keyMain)
+	app.lotteryKeeper = lottery.NewLotteryKeeper(cdc, app.keyMain, app.voterKeeper)
 
 	// register message routes
 	app.Router().
@@ -79,6 +80,7 @@ func NewLotteryApp(logger log.Logger, db dbm.DB, baseAppOptions ...func(*bam.Bas
 	app.SetInitChainer(app.initChainer)
 	app.SetBeginBlocker(app.BeginBlocker)
 	app.SetEndBlocker(app.EndBlocker)
+	app.SetAnteHandler(auth.NewAnteHandler(app.accountMapper, app.feeCollectionKeeper))
 
 	// mount the multistore and load the latest state
 	app.MountStoresIAVL(app.keyMain, app.keyAccount)

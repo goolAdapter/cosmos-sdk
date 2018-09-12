@@ -5,6 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	wire "github.com/cosmos/cosmos-sdk/wire"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 )
 
 var (
@@ -18,9 +19,11 @@ type VoterKeeper struct {
 
 	// The wire codec for binary encoding/decoding of voters.
 	cdc *wire.Codec
+
+	accountMapper auth.AccountMapper
 }
 
-func NewVoterKeeper(cdc *wire.Codec, key sdk.StoreKey) VoterKeeper {
+func NewVoterKeeper(cdc *wire.Codec, key sdk.StoreKey, am auth.AccountMapper) VoterKeeper {
 	return VoterKeeper{
 		key: key,
 		cdc: cdc,
@@ -45,6 +48,13 @@ func (ak VoterKeeper) GetVoter(ctx sdk.Context, addr sdk.AccAddress) (Voter, err
 
 func (ak VoterKeeper) SetVoter(ctx sdk.Context, ac Voter) {
 	addr := ac.GetAddress()
+
+	//auto create account
+	account := ak.accountMapper.GetAccount(ctx, ac.Address)
+	if account == nil {
+		ak.accountMapper.NewAccountWithAddress(ctx, addr)
+	}
+
 	store := ctx.KVStore(ak.key)
 	bz := MustMarshalVoter(ak.cdc, ac)
 	store.Set(AddressStoreKey(addr), bz)

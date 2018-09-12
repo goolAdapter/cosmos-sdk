@@ -2,9 +2,13 @@ package lottery
 
 import (
 	"encoding/json"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
+
+var maxMemoCharacters = 1024
+var maxRoundNumber int64 = 10240
 
 const MsgTypeName string = "lottery"
 
@@ -13,13 +17,17 @@ var _ sdk.Msg = MsgSetupLottery{}
 
 type MsgSetupLottery struct {
 	Address          sdk.AccAddress `json:"address"`
+	Sequence         int64          `json:"sequence"`
 	ParticipateNames []string       `json:"participate_names"`
+	Memo             string         `json:"memo"`
 }
 
-func NewMsgSetupLottery(addr sdk.AccAddress, names []string) MsgSetupLottery {
+func NewMsgSetupLottery(addr sdk.AccAddress, seq int64, names []string, memo string) MsgSetupLottery {
 	return MsgSetupLottery{
 		Address:          addr,
+		Sequence:         seq,
 		ParticipateNames: names,
+		Memo:             memo,
 	}
 }
 
@@ -33,6 +41,12 @@ func (msg MsgSetupLottery) ValidateBasic() sdk.Error {
 
 	if msg.ParticipateNames == nil {
 		return sdk.ErrInvalidPubKey("MsgSetupLottery.ParticipateNames must not be empty")
+	}
+
+	if len(msg.Memo) > maxMemoCharacters {
+		return sdk.ErrMemoTooLarge(
+			fmt.Sprintf("maximum number of characters is %d but received %d characters",
+				maxMemoCharacters, len(msg.Memo)))
 	}
 
 	return nil
@@ -52,7 +66,7 @@ var _ sdk.Msg = MsgStartLotteryRound{}
 
 type MsgStartLotteryRound struct {
 	Address  sdk.AccAddress `json:"address"`
-	Sequence int64          `json:"seq"`
+	Sequence int64          `json:"sequence"`
 	Number   int64          `json:"number"` //how many prize number to generate on this round.
 	Memo     string         `json:"memo"`
 }
@@ -74,8 +88,14 @@ func (msg MsgStartLotteryRound) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidAddress("MsgStartLotteryRound.Address must not be empty")
 	}
 
-	if msg.Number <= 0 {
-		return sdk.ErrInvalidPubKey("MsgStartLotteryRound.Number must not be zero")
+	if msg.Number <= 0 || msg.Number > maxRoundNumber {
+		return sdk.ErrInvalidPubKey(fmt.Sprintf("MsgStartLotteryRound.Number %d is invalid", msg.Number))
+	}
+
+	if len(msg.Memo) > maxMemoCharacters {
+		return sdk.ErrMemoTooLarge(
+			fmt.Sprintf("maximum number of characters is %d but received %d characters",
+				maxMemoCharacters, len(msg.Memo)))
 	}
 
 	return nil

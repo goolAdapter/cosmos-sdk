@@ -2,9 +2,12 @@ package voter
 
 import (
 	"encoding/json"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
+
+var maxMemoCharacters = 1024
 
 const MsgTypeName string = "voter"
 
@@ -29,6 +32,12 @@ func (msg MsgCreateVoter) GetSigners() []sdk.AccAddress { return []sdk.AccAddres
 func (msg MsgCreateVoter) ValidateBasic() sdk.Error {
 	if msg.Address == nil {
 		return sdk.ErrInvalidAddress("MsgCreatevoter.Address must not be empty")
+	}
+
+	if len(msg.Memo) > maxMemoCharacters {
+		return sdk.ErrMemoTooLarge(
+			fmt.Sprintf("maximum number of characters is %d but received %d characters",
+				maxMemoCharacters, len(msg.Memo)))
 	}
 
 	return nil

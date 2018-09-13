@@ -109,3 +109,77 @@ func (msg MsgStartLotteryRound) GetSignBytes() []byte {
 
 	return sdk.MustSortJSON(bz)
 }
+
+//MsgPreVote
+var _ sdk.Msg = MsgPreVote{}
+
+type MsgPreVote struct {
+	Address sdk.AccAddress `json:"address"`
+	Hash    []byte         `json:"hash"`
+}
+
+func NewMsgPreVote(addr sdk.AccAddress, hash []byte) MsgPreVote {
+	return MsgPreVote{
+		Address: addr,
+		Hash:    hash,
+	}
+}
+
+func (msg MsgPreVote) Type() string                 { return MsgTypeName }
+func (msg MsgPreVote) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.Address} }
+
+func (msg MsgPreVote) ValidateBasic() sdk.Error {
+	if msg.Address == nil {
+		return sdk.ErrInvalidAddress("MsgPreVote.Address must not be empty")
+	}
+
+	if len(msg.Hash) == 0 {
+		return ErrInvalidValue(DefaultCodespace)
+	}
+
+	return nil
+}
+
+func (msg MsgPreVote) GetSignBytes() []byte {
+	bz, err := json.Marshal(msg)
+	if err != nil {
+		panic(err)
+	}
+
+	return sdk.MustSortJSON(bz)
+}
+
+//MsgVote
+var _ sdk.Msg = MsgVote{}
+
+type MsgVote struct {
+	Address sdk.AccAddress `json:"address"`
+	Value   int64          `json:"value"`
+}
+
+func NewMsgVote(addr sdk.AccAddress, val int64) MsgVote {
+	return MsgVote{
+		Address: addr,
+		Value:   val,
+	}
+}
+
+func (msg MsgVote) Type() string                 { return MsgTypeName }
+func (msg MsgVote) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.Address} }
+
+func (msg MsgVote) ValidateBasic() sdk.Error {
+	if msg.Address == nil {
+		return sdk.ErrInvalidAddress("MsgVote.Address must not be empty")
+	}
+
+	return nil
+}
+
+func (msg MsgVote) GetSignBytes() []byte {
+	bz, err := json.Marshal(msg)
+	if err != nil {
+		panic(err)
+	}
+
+	return sdk.MustSortJSON(bz)
+}

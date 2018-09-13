@@ -16,6 +16,10 @@ func NewHandler(k LotteryKeeper) sdk.Handler {
 			return handleMsgSetupLottery(ctx, k, msg)
 		case MsgStartLotteryRound:
 			return handleMsgStartLotteryRound(ctx, k, msg)
+		case MsgPreVote:
+			return handleMsgPreVote(ctx, k, msg)
+		case MsgVote:
+			return handleMsgVote(ctx, k, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized cool Msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -38,6 +42,16 @@ func handleMsgStartLotteryRound(ctx sdk.Context, k LotteryKeeper, msg MsgStartLo
 	if err != nil {
 		return err.Result()
 	}
+
+	return sdk.Result{}
+}
+
+func handleMsgPreVote(ctx sdk.Context, k LotteryKeeper, msg MsgPreVote) sdk.Result {
+
+	return sdk.Result{}
+}
+
+func handleMsgVote(ctx sdk.Context, k LotteryKeeper, msg MsgVote) sdk.Result {
 
 	return sdk.Result{}
 }

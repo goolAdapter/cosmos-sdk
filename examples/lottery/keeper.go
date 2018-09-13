@@ -15,10 +15,10 @@ var (
 )
 
 const (
-	waitforNewRoundPhase int64 = iota
-	waitforPreVotePhase
-	waitforVotePhase
-	generateResultPhase
+	WaitforNewRoundPhase int64 = iota
+	WaitforPreVotePhase
+	WaitforVotePhase
+	GenerateResultPhase
 )
 
 // LotteryKeeper - handlers sets/gets of custom variables for your module
@@ -77,7 +77,7 @@ func unmarshalBinaryPanic(cdc *wire.Codec, bz []byte, ptr interface{}) {
 
 func (lk LotteryKeeper) CheckForStartRound(ctx sdk.Context, msg MsgStartLotteryRound) (status int64, seq int64, err sdk.Error) {
 	status = lk.GetStatus(ctx, msg.Address)
-	if status != waitforNewRoundPhase {
+	if status != WaitforNewRoundPhase {
 		return 0, 0, ErrStatusNotMatch(DefaultCodespace, status)
 	}
 
@@ -142,7 +142,7 @@ func (lk LotteryKeeper) StartLotteryRound(ctx sdk.Context, msg MsgStartLotteryRo
 	}
 
 	lk.SetSequence(ctx, msg.Address, seq+1)
-	lk.SetStatus(ctx, msg.Address, int64(waitforPreVotePhase))
+	lk.SetStatus(ctx, msg.Address, int64(WaitforPreVotePhase))
 
 	// iterate to get the voters
 	voters := []voter.Voter{}

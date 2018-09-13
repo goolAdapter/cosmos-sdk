@@ -24,7 +24,7 @@ const (
 func CreateVoterCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create-voter",
-		Short: "create a new voter",
+		Short: "Create a new voter",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txCtx := authctx.NewTxContextFromCLI().WithCodec(cdc)
 			cliCtx := context.NewCLIContext().
@@ -57,7 +57,7 @@ func CreateVoterCmd(cdc *wire.Codec) *cobra.Command {
 func RevocationVoterCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "revocation-voter",
-		Short: "revocation a voter",
+		Short: "Revocation a voter",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txCtx := authctx.NewTxContextFromCLI().WithCodec(cdc)
 			cliCtx := context.NewCLIContext().

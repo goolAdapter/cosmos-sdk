@@ -48,7 +48,7 @@ func SetupCmd(cdc *wire.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			} else if len(res) != 0 {
-				cdc.MustUnmarshalBinary(res, seq)
+				cdc.MustUnmarshalBinary(res, &seq)
 			}
 
 			actors := strings.Split(actorsStr, "#")
@@ -91,6 +91,14 @@ func RoundCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
+			res, err := cliCtx.QueryStore(lottery.GetInfoSequenceKey(from, cdc), "main")
+			var seq int64
+			if err != nil {
+				return err
+			} else if len(res) != 0 {
+				cdc.MustUnmarshalBinary(res, &seq)
+			}
+
 			memo := viper.GetString(flagRoundMemo)
 			if len(memo) > 1024 {
 				err = fmt.Errorf("flag %s too long, must less 1024.", flagRoundMemo)
@@ -103,7 +111,7 @@ func RoundCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := lottery.NewMsgStartLotteryRound(from, 0, num, memo)
+			msg := lottery.NewMsgStartLotteryRound(from, seq+1, num, memo)
 
 			// Build and sign the transaction, then broadcast to a Tendermint node.
 			return utils.SendTx(txCtx, cliCtx, []sdk.Msg{msg})

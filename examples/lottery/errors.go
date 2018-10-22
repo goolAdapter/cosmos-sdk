@@ -16,17 +16,17 @@ const (
 )
 
 func ErrEmptyActor(codespace sdk.CodespaceType) sdk.Error {
-	return sdk.NewError(codespace, CodeEmptyActor, "actor can't be empty.")
+	return sdk.NewError(codespace, CodeEmptyActor, "actor can't be empty")
 }
 
 func ErrStatusNotMatch(codespace sdk.CodespaceType, curStatus int64) sdk.Error {
-	return sdk.NewError(codespace, CodeErrorStatus, fmt.Sprintf("status can't be %d.", curStatus))
+	return sdk.NewError(codespace, CodeErrorStatus, fmt.Sprintf("status can't be %d", curStatus))
 }
 
 func ErrSequenceNotMatch(codespace sdk.CodespaceType, preSequence, curSequence int64) sdk.Error {
-	return sdk.NewError(codespace, CodeErrorSequence, fmt.Sprintf("Sequence don't match, preSequence is %d, curSequence is %d.", preSequence, curSequence))
+	return sdk.NewError(codespace, CodeErrorSequence, fmt.Sprintf("Sequence don't match, preSequence is %d, curSequence is %d", preSequence, curSequence))
 }
 
 func ErrInvalidValue(codespace sdk.CodespaceType) sdk.Error {
-	return sdk.NewError(codespace, CodeErrorValue, fmt.Sprintf("Value is invalid."))
+	return sdk.NewError(codespace, CodeErrorValue, fmt.Sprintf("Value is invalid"))
 }

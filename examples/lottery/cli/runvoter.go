@@ -14,6 +14,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type runVoterCommander struct {
@@ -24,6 +25,8 @@ type runVoterCommander struct {
 
 	Value int64
 }
+
+var flagTargetAddress = "target"
 
 func RunVoterCmd(cdc *wire.Codec) *cobra.Command {
 	cmdr := runVoterCommander{
@@ -38,11 +41,19 @@ func RunVoterCmd(cdc *wire.Codec) *cobra.Command {
 		Run: cmdr.runVoter,
 	}
 
+	cmd.Flags().String(flagTargetAddress, "", "target address")
+
 	return cmd
 }
 
 func (c runVoterCommander) runVoter(cmd *cobra.Command, args []string) {
 	passphrase, err := keys.ReadPassphraseFromStdin(c.cliCtx.FromAddressName)
+	if err != nil {
+		panic(err)
+	}
+
+	bech32addr := viper.GetString(flagTargetAddress)
+	target, err := sdk.AccAddressFromBech32(bech32addr)
 	if err != nil {
 		panic(err)
 	}
@@ -55,7 +66,7 @@ OUTER:
 	for {
 		time.Sleep(1 * time.Second)
 
-		res, err := c.cliCtx.QueryStore(lottery.GetInfoStatusKey(from, c.cdc), "main")
+		res, err := c.cliCtx.QueryStore(lottery.GetInfoStatusKey(target, c.cdc), "main")
 		var status int64
 		if err != nil {
 			c.logger.Error("error querying outgoing packet list length", "err", err)
@@ -64,11 +75,20 @@ OUTER:
 			c.cdc.MustUnmarshalBinary(res, &status)
 		}
 
+		res, err = c.cliCtx.QueryStore(lottery.GetInfoSequenceKey(target, c.cdc), "main")
+		var seq int64
+		if err != nil {
+			c.logger.Error("error querying outgoing packet list length", "err", err)
+			continue OUTER //TODO replace with continue (I think it should just to the correct place where OUTER is now)
+		} else if len(res) != 0 {
+			c.cdc.MustUnmarshalBinary(res, &seq)
+		}
+
 		switch status {
 		case lottery.WaitforPreVotePhase:
-			err = c.preVote(from, passphrase)
+			err = c.preVote(target, from, seq, passphrase)
 		case lottery.WaitforVotePhase:
-			err = c.vote(from, passphrase)
+			err = c.vote(target, from, seq, passphrase)
 		}
 
 		if err != nil {
@@ -78,24 +98,24 @@ OUTER:
 	}
 }
 
-func (c runVoterCommander) preVote(from sdk.AccAddress, passphrase string) error {
+func (c runVoterCommander) preVote(target, from sdk.AccAddress, seq int64, passphrase string) error {
 	res, err := c.cliCtx.QueryStore(lottery.GetInfoPrevoteKey(from, c.cdc), "main")
-	var pvl lottery.PreVoteItemList
+	var vl lottery.VoteItemList
 	if err != nil {
 		c.logger.Error("error querying outgoing packet list length", "err", err)
 		return err
 	} else if len(res) != 0 {
-		c.cdc.MustUnmarshalBinary(res, &pvl)
+		c.cdc.MustUnmarshalBinary(res, &vl)
 	}
 
-	for _, v := range pvl {
+	for _, v := range vl {
 		if v.Address.String() == from.String() && len(v.Hash) == 0 {
 			c.Value = time.Now().UnixNano()
 
 			hash := c.preVoteHash()
 			c.logger.Debug("lock prevote value: %v", c.Value)
 			c.logger.Debug("send prevote hash: %v", hash)
-			msg := lottery.NewMsgPreVote(from, hash)
+			msg := lottery.NewMsgPreVote(target, from, seq, hash)
 
 			// Build and sign the transaction, then broadcast to a Tendermint node.
 			return c.sendTxWithPassphrase(passphrase, []sdk.Msg{msg})
@@ -105,20 +125,20 @@ func (c runVoterCommander) preVote(from sdk.AccAddress, passphrase string) error
 	return nil
 }
 
-func (c runVoterCommander) vote(from sdk.AccAddress, passphrase string) error {
+func (c runVoterCommander) vote(target, from sdk.AccAddress, seq int64, passphrase string) error {
 	res, err := c.cliCtx.QueryStore(lottery.GetInfoVoteKey(from, c.cdc), "main")
-	var pvl lottery.PreVoteItemList
+	var vl lottery.VoteItemList
 	if err != nil {
 		c.logger.Error("error querying outgoing packet list length", "err", err)
 		return err
 	} else if len(res) != 0 {
-		c.cdc.MustUnmarshalBinary(res, &pvl)
+		c.cdc.MustUnmarshalBinary(res, &vl)
 	}
 
-	for _, v := range pvl {
+	for _, v := range vl {
 		if v.Address.String() == from.String() && len(v.Hash) == 0 {
 			c.logger.Debug("send prevote value: %v", c.Value)
-			msg := lottery.NewMsgVote(from, c.Value)
+			msg := lottery.NewMsgVote(target, from, seq, c.Value)
 
 			// Build and sign the transaction, then broadcast to a Tendermint node.
 			return c.sendTxWithPassphrase(passphrase, []sdk.Msg{msg})

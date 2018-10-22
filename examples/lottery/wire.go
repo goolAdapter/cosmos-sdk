@@ -8,8 +8,8 @@ import (
 func RegisterWire(cdc *wire.Codec) {
 	cdc.RegisterConcrete(MsgSetupLottery{}, "lottery/MsgSetupLottery", nil)
 	cdc.RegisterConcrete(MsgStartLotteryRound{}, "lottery/MsgStartLotteryRound", nil)
-	cdc.RegisterConcrete(MsgStartLotteryRound{}, "lottery/MsgPreVote", nil)
-	cdc.RegisterConcrete(MsgStartLotteryRound{}, "lottery/MsgVote", nil)
+	cdc.RegisterConcrete(MsgPreVote{}, "lottery/MsgPreVote", nil)
+	cdc.RegisterConcrete(MsgVote{}, "lottery/MsgVote", nil)
 }
 
 var msgCdc = wire.NewCodec()

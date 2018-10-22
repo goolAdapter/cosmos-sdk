@@ -14,8 +14,8 @@ func NewHandler(k VoterKeeper) sdk.Handler {
 		switch msg := msg.(type) {
 		case MsgCreateVoter:
 			return handleMsgCreateVoter(ctx, k, msg)
-		case MsgRevocationVoter:
-			return handleMsgRevocationVoter(ctx, k, msg)
+		case MsgRevokeVoter:
+			return handleMsgRevokeVoter(ctx, k, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized cool Msg type: %v", reflect.TypeOf(msg).Name())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -31,7 +31,7 @@ func handleMsgCreateVoter(ctx sdk.Context, k VoterKeeper, msg MsgCreateVoter) sd
 	return sdk.Result{}
 }
 
-func handleMsgRevocationVoter(ctx sdk.Context, k VoterKeeper, msg MsgRevocationVoter) sdk.Result {
+func handleMsgRevokeVoter(ctx sdk.Context, k VoterKeeper, msg MsgRevokeVoter) sdk.Result {
 	k.DeleteVoter(ctx, msg.Address)
 
 	return sdk.Result{}

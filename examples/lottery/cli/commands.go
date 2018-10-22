@@ -24,7 +24,7 @@ const (
 func SetupCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "setup",
-		Short: "setup a new lottery status",
+		Short: "Setup a new lottery status",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txCtx := authctx.NewTxContextFromCLI().WithCodec(cdc)
 			cliCtx := context.NewCLIContext().
@@ -71,8 +71,8 @@ func SetupCmd(cdc *wire.Codec) *cobra.Command {
 }
 
 const (
-	flagNumber    = "number"
-	flagRoundMemo = "roundmemo"
+	flagAmount    = "amount"
+	flagRoundMemo = "roundMemo"
 )
 
 func RoundCmd(cdc *wire.Codec) *cobra.Command {
@@ -105,20 +105,20 @@ func RoundCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			num := viper.GetInt64(flagNumber)
-			if num <= 0 || num > 10240 {
-				err = fmt.Errorf("flag %s have invalid value %d", flagNumber, num)
+			amount := viper.GetInt64(flagAmount)
+			if amount <= 0 || amount > 10240 {
+				err = fmt.Errorf("flag %s have invalid value %d", flagAmount, amount)
 				return err
 			}
 
-			msg := lottery.NewMsgStartLotteryRound(from, seq+1, num, memo)
+			msg := lottery.NewMsgStartLotteryRound(from, seq+1, amount, memo)
 
 			// Build and sign the transaction, then broadcast to a Tendermint node.
 			return utils.SendTx(txCtx, cliCtx, []sdk.Msg{msg})
 		},
 	}
 
-	cmd.Flags().Int64(flagNumber, 0, "how many prize number to generate on this round")
+	cmd.Flags().Int64(flagAmount, 0, "how many number to generate on this round")
 	cmd.Flags().String(flagRoundMemo, "", "memo to this round")
 
 	return cmd

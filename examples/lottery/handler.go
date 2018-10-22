@@ -47,11 +47,19 @@ func handleMsgStartLotteryRound(ctx sdk.Context, k LotteryKeeper, msg MsgStartLo
 }
 
 func handleMsgPreVote(ctx sdk.Context, k LotteryKeeper, msg MsgPreVote) sdk.Result {
+	err := k.HandlePreVoteMsg(ctx, msg)
+	if err != nil {
+		return err.Result()
+	}
 
 	return sdk.Result{}
 }
 
 func handleMsgVote(ctx sdk.Context, k LotteryKeeper, msg MsgVote) sdk.Result {
+	err := k.HandleVoteMsg(ctx, msg)
+	if err != nil {
+		return err.Result()
+	}
 
 	return sdk.Result{}
 }

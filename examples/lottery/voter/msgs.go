@@ -36,7 +36,7 @@ func (msg MsgCreateVoter) ValidateBasic() sdk.Error {
 
 	if len(msg.Memo) > maxMemoCharacters {
 		return sdk.ErrMemoTooLarge(
-			fmt.Sprintf("maximum number of characters is %d but received %d characters",
+			fmt.Sprintf("maximum length of characters is %d but received %d characters",
 				maxMemoCharacters, len(msg.Memo)))
 	}
 
@@ -52,31 +52,31 @@ func (msg MsgCreateVoter) GetSignBytes() []byte {
 	return sdk.MustSortJSON(bz)
 }
 
-//MsgRevocationVoter revocation a voter
-var _ sdk.Msg = MsgRevocationVoter{}
+//MsgRevokeVoter Revoke a voter
+var _ sdk.Msg = MsgRevokeVoter{}
 
-type MsgRevocationVoter struct {
+type MsgRevokeVoter struct {
 	Address sdk.AccAddress `json:"address"`
 }
 
-func NewMsgRevocationVoter(addr sdk.AccAddress) MsgRevocationVoter {
-	return MsgRevocationVoter{
+func NewMsgRevokeVoter(addr sdk.AccAddress) MsgRevokeVoter {
+	return MsgRevokeVoter{
 		Address: addr,
 	}
 }
 
-func (msg MsgRevocationVoter) Type() string                 { return MsgTypeName }
-func (msg MsgRevocationVoter) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.Address} }
+func (msg MsgRevokeVoter) Type() string                 { return MsgTypeName }
+func (msg MsgRevokeVoter) GetSigners() []sdk.AccAddress { return []sdk.AccAddress{msg.Address} }
 
-func (msg MsgRevocationVoter) ValidateBasic() sdk.Error {
+func (msg MsgRevokeVoter) ValidateBasic() sdk.Error {
 	if msg.Address == nil {
-		return sdk.ErrInvalidAddress("MsgRevocationVoter.Address must not be empty")
+		return sdk.ErrInvalidAddress("MsgRevokeVoter.Address must not be empty")
 	}
 
 	return nil
 }
 
-func (msg MsgRevocationVoter) GetSignBytes() []byte {
+func (msg MsgRevokeVoter) GetSignBytes() []byte {
 	bz, err := json.Marshal(msg)
 	if err != nil {
 		panic(err)

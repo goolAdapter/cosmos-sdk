@@ -8,7 +8,7 @@ import (
 )
 
 var maxMemoCharacters = 1024
-var maxRoundNumber int64 = 10240
+var maxRoundAmount int64 = 10240
 
 const MsgTypeName string = "lottery"
 
@@ -45,7 +45,7 @@ func (msg MsgSetupLottery) ValidateBasic() sdk.Error {
 
 	if len(msg.Memo) > maxMemoCharacters {
 		return sdk.ErrMemoTooLarge(
-			fmt.Sprintf("maximum number of characters is %d but received %d characters",
+			fmt.Sprintf("maximum length of characters is %d but received %d characters",
 				maxMemoCharacters, len(msg.Memo)))
 	}
 
@@ -67,15 +67,15 @@ var _ sdk.Msg = MsgStartLotteryRound{}
 type MsgStartLotteryRound struct {
 	Address  sdk.AccAddress `json:"address"`
 	Sequence int64          `json:"sequence"`
-	Number   int64          `json:"number"` //how many prize number to generate on this round.
+	Amount   int64          `json:"amount"` //how many prize number to generate on this round.
 	Memo     string         `json:"memo"`
 }
 
-func NewMsgStartLotteryRound(addr sdk.AccAddress, seq int64, number int64, memo string) MsgStartLotteryRound {
+func NewMsgStartLotteryRound(addr sdk.AccAddress, seq int64, amount int64, memo string) MsgStartLotteryRound {
 	return MsgStartLotteryRound{
 		Address:  addr,
 		Sequence: seq,
-		Number:   number,
+		Amount:   amount,
 		Memo:     memo,
 	}
 }
@@ -88,13 +88,13 @@ func (msg MsgStartLotteryRound) ValidateBasic() sdk.Error {
 		return sdk.ErrInvalidAddress("MsgStartLotteryRound.Address must not be empty")
 	}
 
-	if msg.Number <= 0 || msg.Number > maxRoundNumber {
-		return sdk.ErrInvalidPubKey(fmt.Sprintf("MsgStartLotteryRound.Number %d is invalid", msg.Number))
+	if msg.Amount <= 0 || msg.Amount > maxRoundAmount {
+		return sdk.ErrInvalidPubKey(fmt.Sprintf("MsgStartLotteryRound.Amount %d is invalid", msg.Amount))
 	}
 
 	if len(msg.Memo) > maxMemoCharacters {
 		return sdk.ErrMemoTooLarge(
-			fmt.Sprintf("maximum number of characters is %d but received %d characters",
+			fmt.Sprintf("maximum length of characters is %d but received %d characters",
 				maxMemoCharacters, len(msg.Memo)))
 	}
 
@@ -114,14 +114,18 @@ func (msg MsgStartLotteryRound) GetSignBytes() []byte {
 var _ sdk.Msg = MsgPreVote{}
 
 type MsgPreVote struct {
-	Address sdk.AccAddress `json:"address"`
-	Hash    []byte         `json:"hash"`
+	Target   sdk.AccAddress `json:"address"`
+	Address  sdk.AccAddress `json:"address"`
+	Sequence int64          `json:"sequence"`
+	Hash     []byte         `json:"hash"`
 }
 
-func NewMsgPreVote(addr sdk.AccAddress, hash []byte) MsgPreVote {
+func NewMsgPreVote(target, from sdk.AccAddress, seq int64, hash []byte) MsgPreVote {
 	return MsgPreVote{
-		Address: addr,
-		Hash:    hash,
+		Target:   target,
+		Address:  from,
+		Sequence: seq,
+		Hash:     hash,
 	}
 }
 
@@ -153,14 +157,18 @@ func (msg MsgPreVote) GetSignBytes() []byte {
 var _ sdk.Msg = MsgVote{}
 
 type MsgVote struct {
-	Address sdk.AccAddress `json:"address"`
-	Value   int64          `json:"value"`
+	Target   sdk.AccAddress `json:"address"`
+	Address  sdk.AccAddress `json:"address"`
+	Sequence int64          `json:"sequence"`
+	Value    int64          `json:"value"`
 }
 
-func NewMsgVote(addr sdk.AccAddress, val int64) MsgVote {
+func NewMsgVote(target, from sdk.AccAddress, seq int64, val int64) MsgVote {
 	return MsgVote{
-		Address: addr,
-		Value:   val,
+		Target:   target,
+		Address:  from,
+		Sequence: seq,
+		Value:    val,
 	}
 }
 

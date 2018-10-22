@@ -54,9 +54,9 @@ func CreateVoterCmd(cdc *wire.Codec) *cobra.Command {
 	return cmd
 }
 
-func RevocationVoterCmd(cdc *wire.Codec) *cobra.Command {
+func RevokeVoterCmd(cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "revocation-voter",
+		Use:   "revoke-voter",
 		Short: "Revocation a voter",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txCtx := authctx.NewTxContextFromCLI().WithCodec(cdc)
@@ -70,7 +70,7 @@ func RevocationVoterCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			msg := voter.NewMsgRevocationVoter(from)
+			msg := voter.NewMsgRevokeVoter(from)
 
 			// Build and sign the transaction, then broadcast to a Tendermint node.
 			return utils.SendTx(txCtx, cliCtx, []sdk.Msg{msg})
@@ -80,7 +80,7 @@ func RevocationVoterCmd(cdc *wire.Codec) *cobra.Command {
 	return cmd
 }
 
-func GetCmdQueryVoters(storeName string, cdc *wire.Codec) *cobra.Command {
+func QueryVotersCmd(storeName string, cdc *wire.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "voters",
 		Short: "Query for all voters",

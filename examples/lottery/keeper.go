@@ -1,9 +1,12 @@
 package lottery
 
 import (
+	"bytes"
+
 	"github.com/cosmos/cosmos-sdk/examples/lottery/voter"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/wire"
+	"golang.org/x/crypto/ripemd160"
 )
 
 var (
@@ -75,7 +78,7 @@ func unmarshalBinaryPanic(cdc *wire.Codec, bz []byte, ptr interface{}) {
 	}
 }
 
-func (lk LotteryKeeper) CheckForStartRound(ctx sdk.Context, msg MsgStartLotteryRound) (status int64, seq int64, err sdk.Error) {
+func (lk LotteryKeeper) checkForStartRound(ctx sdk.Context, msg MsgStartLotteryRound) (status int64, seq int64, err sdk.Error) {
 	status = lk.GetStatus(ctx, msg.Address)
 	if status != WaitforNewRoundPhase {
 		return 0, 0, ErrStatusNotMatch(DefaultCodespace, status)
@@ -136,13 +139,10 @@ func (lk LotteryKeeper) SetStatus(ctx sdk.Context, address sdk.AccAddress, statu
 }
 
 func (lk LotteryKeeper) StartLotteryRound(ctx sdk.Context, msg MsgStartLotteryRound) sdk.Error {
-	_, seq, err := lk.CheckForStartRound(ctx, msg)
+	_, seq, err := lk.checkForStartRound(ctx, msg)
 	if err != nil {
 		return err
 	}
-
-	lk.SetSequence(ctx, msg.Address, seq+1)
-	lk.SetStatus(ctx, msg.Address, int64(WaitforPreVotePhase))
 
 	// iterate to get the voters
 	voters := []voter.Voter{}
@@ -152,15 +152,132 @@ func (lk LotteryKeeper) StartLotteryRound(ctx sdk.Context, msg MsgStartLotteryRo
 	}
 	lk.voterKeeper.IterateVoters(ctx, appendVoter)
 
-	var preVotes PreVoteItemList
+	var preVotes VoteItemList
 	for _, v := range voters {
-		preVotes = append(preVotes, PreVoteItem{v.Address, []byte("")})
+		preVotes = append(preVotes, VoteItem{v.Address, []byte(""), 0})
 	}
 	preVotes = preVotes.Sort()
 	store := ctx.KVStore(lk.key)
 	key := GetInfoPrevoteKey(msg.Address, lk.cdc)
 	store.Set(key, lk.cdc.MustMarshalBinary(preVotes))
 
+	lk.SetSequence(ctx, msg.Address, seq+1)
+	lk.SetStatus(ctx, msg.Address, int64(WaitforPreVotePhase))
+
+	return nil
+}
+
+func (lk LotteryKeeper) checkFoPreVoteRound(ctx sdk.Context, msg MsgPreVote) (status int64, seq int64, err sdk.Error) {
+	status = lk.GetStatus(ctx, msg.Target)
+	if status != WaitforPreVotePhase || status != WaitforVotePhase {
+		return 0, 0, ErrStatusNotMatch(DefaultCodespace, status)
+	}
+
+	seq = lk.GetSequence(ctx, msg.Target)
+	if seq != msg.Sequence {
+		return 0, 0, ErrSequenceNotMatch(DefaultCodespace, seq, msg.Sequence)
+	}
+
+	return status, seq, nil
+}
+
+func (lk LotteryKeeper) HandlePreVoteMsg(ctx sdk.Context, msg MsgPreVote) sdk.Error {
+	status, _, err := lk.checkFoPreVoteRound(ctx, msg)
+	if err != nil {
+		return err
+	}
+
+	store := ctx.KVStore(lk.key)
+	key := GetInfoPrevoteKey(msg.Target, lk.cdc)
+	bz := store.Get(key)
+	if bz == nil {
+		return err
+	}
+
+	var hashedCount = 0
+	var votes VoteItemList
+	unmarshalBinaryPanic(lk.cdc, bz, &votes)
+	for i := 0; i < len(votes); i++ {
+		if len(votes[i].Hash) == 0 {
+			if bytes.Equal(votes[i].Address, msg.Address) {
+				votes[i].Hash = msg.Hash
+				hashedCount++
+			}
+		} else {
+			hashedCount++
+		}
+	}
+
+	store.Set(key, lk.cdc.MustMarshalBinary(votes))
+
+	if status == WaitforPreVotePhase {
+		if hashedCount*5 > len(votes)*4 {
+			lk.SetStatus(ctx, msg.Target, int64(WaitforVotePhase))
+		}
+	}
+	return nil
+}
+
+func (lk LotteryKeeper) checkForVoteRound(ctx sdk.Context, msg MsgVote) (status int64, seq int64, err sdk.Error) {
+	status = lk.GetStatus(ctx, msg.Target)
+	if status != WaitforVotePhase {
+		return 0, 0, ErrStatusNotMatch(DefaultCodespace, status)
+	}
+
+	seq = lk.GetSequence(ctx, msg.Target)
+	if seq != msg.Sequence {
+		return 0, 0, ErrSequenceNotMatch(DefaultCodespace, seq, msg.Sequence)
+	}
+
+	return status, seq, nil
+}
+
+func (lk LotteryKeeper) voteHash(v int64) []byte {
+	// Doesn't write Name, since merkle.SimpleHashFromMap() will
+	// include them via the keys.
+	bz, _ := lk.cdc.MarshalBinary(v) // Does not error
+	hasher := ripemd160.New()
+	_, err := hasher.Write(bz)
+	if err != nil {
+		// TODO: Handle with #870
+		panic(err)
+	}
+	return hasher.Sum(nil)
+}
+
+func (lk LotteryKeeper) HandleVoteMsg(ctx sdk.Context, msg MsgVote) sdk.Error {
+	status, _, err := lk.checkForVoteRound(ctx, msg)
+	if err != nil {
+		return err
+	}
+
+	store := ctx.KVStore(lk.key)
+	key := GetInfoPrevoteKey(msg.Target, lk.cdc)
+	bz := store.Get(key)
+	if bz == nil {
+		return err
+	}
+
+	var hashedCount = 0
+	var votes VoteItemList
+	unmarshalBinaryPanic(lk.cdc, bz, &votes)
+	for i := 0; i < len(votes); i++ {
+		if votes[i].Value == 0 {
+			if bytes.Equal(votes[i].Address, msg.Address) && bytes.Equal(lk.voteHash(msg.Value), votes[i].Hash) {
+				votes[i].Value = msg.Value
+				hashedCount++
+			}
+		} else {
+			hashedCount++
+		}
+	}
+
+	store.Set(key, lk.cdc.MustMarshalBinary(votes))
+	if status == WaitforVotePhase {
+		if hashedCount*4 > len(votes)*3 {
+			lk.SetStatus(ctx, msg.Target, int64(GenerateResultPhase))
+		}
+	}
 	return nil
 }
 

@@ -67,6 +67,7 @@ func SetupCmd(cdc *wire.Codec) *cobra.Command {
 	}
 
 	cmd.Flags().String(flagActor, "", "actor list, like A#B#C#D")
+	cmd.Flags().String(flagSetupMemo, "", "memo to this setup")
 	return cmd
 }
 

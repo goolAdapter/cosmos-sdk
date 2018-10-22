@@ -180,10 +180,10 @@ func getHeight(tree *iavl.VersionedTree, req abci.RequestQuery) int64 {
 	height := req.Height
 	if height == 0 {
 		latest := tree.Version64()
-		if tree.VersionExists(latest - 1) {
-			height = latest - 1
-		} else {
+		if tree.VersionExists(latest) {
 			height = latest
+		} else {
+			height = latest - 1
 		}
 	}
 	return height

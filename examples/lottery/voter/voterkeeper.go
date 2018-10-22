@@ -25,8 +25,9 @@ type VoterKeeper struct {
 
 func NewVoterKeeper(cdc *wire.Codec, key sdk.StoreKey, am auth.AccountMapper) VoterKeeper {
 	return VoterKeeper{
-		key: key,
-		cdc: cdc,
+		key:           key,
+		cdc:           cdc,
+		accountMapper: am,
 	}
 }
 
@@ -70,7 +71,7 @@ func (ak VoterKeeper) IterateVoters(ctx sdk.Context, process func(Voter) (stop b
 	iter := sdk.KVStorePrefixIterator(store, VoterPrefixKey)
 	defer iter.Close()
 
-	for ; !iter.Valid(); iter.Next() {
+	for ; iter.Valid(); iter.Next() {
 		acc := MustUnmarshalVoter(ak.cdc, iter.Key()[1:], iter.Value())
 		if process(acc) {
 			return

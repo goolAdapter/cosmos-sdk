@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	flagVoterMemo = "votermemo"
+	flagVoterMemo = "voterMemo"
 )
 
 func CreateVoterCmd(cdc *wire.Codec) *cobra.Command {

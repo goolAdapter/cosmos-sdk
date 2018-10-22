@@ -152,14 +152,14 @@ func (lk LotteryKeeper) StartLotteryRound(ctx sdk.Context, msg MsgStartLotteryRo
 	}
 	lk.voterKeeper.IterateVoters(ctx, appendVoter)
 
-	var preVotes VoteItemList
+	var vl VoteItemList
 	for _, v := range voters {
-		preVotes = append(preVotes, VoteItem{v.Address, []byte(""), 0})
+		vl = append(vl, VoteItem{v.Address, []byte(""), 0})
 	}
-	preVotes = preVotes.Sort()
+	vl = vl.Sort()
 	store := ctx.KVStore(lk.key)
-	key := GetInfoPrevoteKey(msg.Address, lk.cdc)
-	store.Set(key, lk.cdc.MustMarshalBinary(preVotes))
+	key := GetInfoVoteKey(msg.Address, lk.cdc)
+	store.Set(key, lk.cdc.MustMarshalBinary(vl))
 
 	lk.SetSequence(ctx, msg.Address, seq+1)
 	lk.SetStatus(ctx, msg.Address, int64(WaitforPreVotePhase))
@@ -169,7 +169,7 @@ func (lk LotteryKeeper) StartLotteryRound(ctx sdk.Context, msg MsgStartLotteryRo
 
 func (lk LotteryKeeper) checkFoPreVoteRound(ctx sdk.Context, msg MsgPreVote) (status int64, seq int64, err sdk.Error) {
 	status = lk.GetStatus(ctx, msg.Target)
-	if status != WaitforPreVotePhase || status != WaitforVotePhase {
+	if status != WaitforPreVotePhase && status != WaitforVotePhase {
 		return 0, 0, ErrStatusNotMatch(DefaultCodespace, status)
 	}
 
@@ -188,7 +188,7 @@ func (lk LotteryKeeper) HandlePreVoteMsg(ctx sdk.Context, msg MsgPreVote) sdk.Er
 	}
 
 	store := ctx.KVStore(lk.key)
-	key := GetInfoPrevoteKey(msg.Target, lk.cdc)
+	key := GetInfoVoteKey(msg.Target, lk.cdc)
 	bz := store.Get(key)
 	if bz == nil {
 		return err
@@ -252,7 +252,7 @@ func (lk LotteryKeeper) HandleVoteMsg(ctx sdk.Context, msg MsgVote) sdk.Error {
 	}
 
 	store := ctx.KVStore(lk.key)
-	key := GetInfoPrevoteKey(msg.Target, lk.cdc)
+	key := GetInfoVoteKey(msg.Target, lk.cdc)
 	bz := store.Get(key)
 	if bz == nil {
 		return err
@@ -307,10 +307,6 @@ func GetInfoSequenceKey(address sdk.AccAddress, cdc *wire.Codec) []byte {
 
 func GetInfoStatusKey(address sdk.AccAddress, cdc *wire.Codec) []byte {
 	return append(GetInfoPrefix(address, cdc), statusKey...)
-}
-
-func GetInfoPrevoteKey(address sdk.AccAddress, cdc *wire.Codec) []byte {
-	return append(GetInfoPrefix(address, cdc), prevoteKey...)
 }
 
 func GetInfoVoteKey(address sdk.AccAddress, cdc *wire.Codec) []byte {

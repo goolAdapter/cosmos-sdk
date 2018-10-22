@@ -20,8 +20,6 @@ import (
 type runVoterCommander struct {
 	cdc    *wire.Codec
 	logger log.Logger
-	txCtx  authctx.TxContext
-	cliCtx context.CLIContext
 
 	Value int64
 }
@@ -29,11 +27,9 @@ type runVoterCommander struct {
 var flagTargetAddress = "target"
 
 func RunVoterCmd(cdc *wire.Codec) *cobra.Command {
-	cmdr := runVoterCommander{
+	cmdr := &runVoterCommander{
 		cdc:    cdc,
 		logger: log.NewTMLogger(log.NewSyncWriter(os.Stdout)),
-		txCtx:  authctx.NewTxContextFromCLI().WithCodec(cdc),
-		cliCtx: context.NewCLIContext().WithCodec(cdc).WithLogger(os.Stdout).WithAccountDecoder(lottery.GetAccountDecoder(cdc)),
 	}
 
 	cmd := &cobra.Command{
@@ -46,8 +42,10 @@ func RunVoterCmd(cdc *wire.Codec) *cobra.Command {
 	return cmd
 }
 
-func (c runVoterCommander) runVoter(cmd *cobra.Command, args []string) {
-	passphrase, err := keys.ReadPassphraseFromStdin(c.cliCtx.FromAddressName)
+func (c *runVoterCommander) runVoter(cmd *cobra.Command, args []string) {
+	cliCtx := context.NewCLIContext().WithCodec(c.cdc).WithLogger(os.Stdout).WithAccountDecoder(lottery.GetAccountDecoder(c.cdc))
+
+	passphrase, err := keys.ReadPassphraseFromStdin(cliCtx.FromAddressName)
 	if err != nil {
 		panic(err)
 	}
@@ -58,7 +56,7 @@ func (c runVoterCommander) runVoter(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	from, err := c.cliCtx.GetFromAddress()
+	from, err := cliCtx.GetFromAddress()
 	if err != nil {
 		panic(err)
 	}
@@ -66,7 +64,7 @@ OUTER:
 	for {
 		time.Sleep(1 * time.Second)
 
-		res, err := c.cliCtx.QueryStore(lottery.GetInfoStatusKey(target, c.cdc), "main")
+		res, err := cliCtx.QueryStore(lottery.GetInfoStatusKey(target, c.cdc), "main")
 		var status int64
 		if err != nil {
 			c.logger.Error("error querying outgoing packet list length", "err", err)
@@ -75,7 +73,7 @@ OUTER:
 			c.cdc.MustUnmarshalBinary(res, &status)
 		}
 
-		res, err = c.cliCtx.QueryStore(lottery.GetInfoSequenceKey(target, c.cdc), "main")
+		res, err = cliCtx.QueryStore(lottery.GetInfoSequenceKey(target, c.cdc), "main")
 		var seq int64
 		if err != nil {
 			c.logger.Error("error querying outgoing packet list length", "err", err)
@@ -86,9 +84,11 @@ OUTER:
 
 		switch status {
 		case lottery.WaitforPreVotePhase:
-			err = c.preVote(target, from, seq, passphrase)
+			err = c.preVote(cliCtx, target, from, seq, passphrase)
 		case lottery.WaitforVotePhase:
-			err = c.vote(target, from, seq, passphrase)
+			err = c.vote(cliCtx, target, from, seq, passphrase)
+		default:
+			c.logger.Debug("nothing to do, sleep 1 second")
 		}
 
 		if err != nil {
@@ -98,8 +98,9 @@ OUTER:
 	}
 }
 
-func (c runVoterCommander) preVote(target, from sdk.AccAddress, seq int64, passphrase string) error {
-	res, err := c.cliCtx.QueryStore(lottery.GetInfoPrevoteKey(from, c.cdc), "main")
+func (c *runVoterCommander) preVote(cliCtx context.CLIContext, target, from sdk.AccAddress, seq int64, passphrase string) error {
+	c.logger.Debug("do preVote")
+	res, err := cliCtx.QueryStore(lottery.GetInfoVoteKey(target, c.cdc), "main")
 	var vl lottery.VoteItemList
 	if err != nil {
 		c.logger.Error("error querying outgoing packet list length", "err", err)
@@ -113,20 +114,21 @@ func (c runVoterCommander) preVote(target, from sdk.AccAddress, seq int64, passp
 			c.Value = time.Now().UnixNano()
 
 			hash := c.preVoteHash()
-			c.logger.Debug("lock prevote value: %v", c.Value)
-			c.logger.Debug("send prevote hash: %v", hash)
+			c.logger.Debug("lock prevote", "value", c.Value)
+			c.logger.Debug("send prevote", "hash", hash)
 			msg := lottery.NewMsgPreVote(target, from, seq, hash)
 
 			// Build and sign the transaction, then broadcast to a Tendermint node.
-			return c.sendTxWithPassphrase(passphrase, []sdk.Msg{msg})
+			return c.sendTxWithPassphrase(cliCtx, passphrase, []sdk.Msg{msg})
 		}
 	}
 
 	return nil
 }
 
-func (c runVoterCommander) vote(target, from sdk.AccAddress, seq int64, passphrase string) error {
-	res, err := c.cliCtx.QueryStore(lottery.GetInfoVoteKey(from, c.cdc), "main")
+func (c *runVoterCommander) vote(cliCtx context.CLIContext, target, from sdk.AccAddress, seq int64, passphrase string) error {
+	c.logger.Debug("do vote")
+	res, err := cliCtx.QueryStore(lottery.GetInfoVoteKey(target, c.cdc), "main")
 	var vl lottery.VoteItemList
 	if err != nil {
 		c.logger.Error("error querying outgoing packet list length", "err", err)
@@ -136,19 +138,19 @@ func (c runVoterCommander) vote(target, from sdk.AccAddress, seq int64, passphra
 	}
 
 	for _, v := range vl {
-		if v.Address.String() == from.String() && len(v.Hash) == 0 {
-			c.logger.Debug("send prevote value: %v", c.Value)
+		if v.Address.String() == from.String() && len(v.Hash) != 0 && v.Value == 0 {
+			c.logger.Debug("send vote", "value", c.Value)
 			msg := lottery.NewMsgVote(target, from, seq, c.Value)
 
 			// Build and sign the transaction, then broadcast to a Tendermint node.
-			return c.sendTxWithPassphrase(passphrase, []sdk.Msg{msg})
+			return c.sendTxWithPassphrase(cliCtx, passphrase, []sdk.Msg{msg})
 		}
 	}
 
 	return nil
 }
 
-func (c runVoterCommander) preVoteHash() []byte {
+func (c *runVoterCommander) preVoteHash() []byte {
 	// Doesn't write Name, since merkle.SimpleHashFromMap() will
 	// include them via the keys.
 	bz, _ := c.cdc.MarshalBinary(c.Value) // Does not error
@@ -161,44 +163,45 @@ func (c runVoterCommander) preVoteHash() []byte {
 	return hasher.Sum(nil)
 }
 
-func (c runVoterCommander) sendTxWithPassphrase(passphrase string, msgs []sdk.Msg) error {
-	if err := c.cliCtx.EnsureAccountExists(); err != nil {
+func (c *runVoterCommander) sendTxWithPassphrase(cliCtx context.CLIContext, passphrase string, msgs []sdk.Msg) error {
+	if err := cliCtx.EnsureAccountExists(); err != nil {
 		return err
 	}
 
-	from, err := c.cliCtx.GetFromAddress()
+	from, err := cliCtx.GetFromAddress()
 	if err != nil {
 		return err
 	}
+	txCtx := authctx.NewTxContextFromCLI().WithCodec(c.cdc)
 
 	// TODO: (ref #1903) Allow for user supplied account number without
 	// automatically doing a manual lookup.
-	if c.txCtx.AccountNumber == 0 {
-		accNum, err := c.cliCtx.GetAccountNumber(from)
+	if txCtx.AccountNumber == 0 {
+		accNum, err := cliCtx.GetAccountNumber(from)
 		if err != nil {
 			return err
 		}
 
-		c.txCtx = c.txCtx.WithAccountNumber(accNum)
+		txCtx = txCtx.WithAccountNumber(accNum)
 	}
 
 	// TODO: (ref #1903) Allow for user supplied account sequence without
 	// automatically doing a manual lookup.
-	if c.txCtx.Sequence == 0 {
-		accSeq, err := c.cliCtx.GetAccountSequence(from)
+	if txCtx.Sequence == 0 {
+		accSeq, err := cliCtx.GetAccountSequence(from)
 		if err != nil {
 			return err
 		}
 
-		c.txCtx = c.txCtx.WithSequence(accSeq)
+		txCtx = txCtx.WithSequence(accSeq)
 	}
 
 	// build and sign the transaction
-	txBytes, err := c.txCtx.BuildAndSign(c.cliCtx.FromAddressName, passphrase, msgs)
+	txBytes, err := txCtx.BuildAndSign(cliCtx.FromAddressName, passphrase, msgs)
 	if err != nil {
 		return err
 	}
 
 	// broadcast to a Tendermint node
-	return c.cliCtx.EnsureBroadcastTx(txBytes)
+	return cliCtx.EnsureBroadcastTx(txBytes)
 }

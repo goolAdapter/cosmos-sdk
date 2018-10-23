@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/utils"
 	"github.com/cosmos/cosmos-sdk/examples/lottery"
@@ -15,10 +16,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-)
-
-const (
-	flagVoterMemo = "voterMemo"
 )
 
 func CreateVoterCmd(cdc *wire.Codec) *cobra.Command {
@@ -37,9 +34,9 @@ func CreateVoterCmd(cdc *wire.Codec) *cobra.Command {
 				return err
 			}
 
-			memo := viper.GetString(flagVoterMemo)
+			memo := viper.GetString(client.FlagMemo)
 			if len(memo) > 1024 {
-				err = fmt.Errorf("flag %s too long, must less 1024.", flagVoterMemo)
+				err = fmt.Errorf("flag %s too long, must less 1024.", client.FlagMemo)
 				return err
 			}
 
@@ -50,7 +47,6 @@ func CreateVoterCmd(cdc *wire.Codec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String(flagVoterMemo, "", "voter's description")
 	return cmd
 }
 

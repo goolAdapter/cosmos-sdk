@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"math"
 	"os"
 	"time"
 
@@ -23,8 +24,6 @@ type runVoterCommander struct {
 
 	Value int64
 }
-
-var flagTargetAddress = "target"
 
 func RunVoterCmd(cdc *wire.Codec) *cobra.Command {
 	cmdr := &runVoterCommander{
@@ -111,7 +110,7 @@ func (c *runVoterCommander) preVote(cliCtx context.CLIContext, target, from sdk.
 
 	for _, v := range vl {
 		if v.Address.String() == from.String() && len(v.Hash) == 0 {
-			c.Value = time.Now().UnixNano()
+			c.Value = time.Now().UnixNano() % int64(math.Pow(2, 32))
 
 			hash := c.preVoteHash()
 			c.logger.Debug("lock prevote", "value", c.Value)

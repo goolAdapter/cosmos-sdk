@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/client/utils"
 	"github.com/cosmos/cosmos-sdk/examples/lottery"
@@ -17,8 +18,7 @@ import (
 )
 
 const (
-	flagActor     = "actor"
-	flagSetupMemo = "setupMemo"
+	flagActor = "actor"
 )
 
 func SetupCmd(cdc *wire.Codec) *cobra.Command {
@@ -53,9 +53,9 @@ func SetupCmd(cdc *wire.Codec) *cobra.Command {
 
 			actors := strings.Split(actorsStr, "#")
 
-			memo := viper.GetString(flagSetupMemo)
+			memo := viper.GetString(client.FlagMemo)
 			if len(memo) > 1024 {
-				err = fmt.Errorf("flag %s too long, must less 1024.", flagSetupMemo)
+				err = fmt.Errorf("flag %s too long, must less 1024.", client.FlagMemo)
 				return err
 			}
 
@@ -67,13 +67,11 @@ func SetupCmd(cdc *wire.Codec) *cobra.Command {
 	}
 
 	cmd.Flags().String(flagActor, "", "actor list, like A#B#C#D")
-	cmd.Flags().String(flagSetupMemo, "", "memo to this setup")
 	return cmd
 }
 
 const (
-	flagAmount    = "amount"
-	flagRoundMemo = "roundMemo"
+	flagAmount = "amount"
 )
 
 func RoundCmd(cdc *wire.Codec) *cobra.Command {
@@ -100,9 +98,9 @@ func RoundCmd(cdc *wire.Codec) *cobra.Command {
 				cdc.MustUnmarshalBinary(res, &seq)
 			}
 
-			memo := viper.GetString(flagRoundMemo)
+			memo := viper.GetString(client.FlagMemo)
 			if len(memo) > 1024 {
-				err = fmt.Errorf("flag %s too long, must less 1024.", flagRoundMemo)
+				err = fmt.Errorf("flag %s too long, must less 1024.", client.FlagMemo)
 				return err
 			}
 
@@ -120,7 +118,62 @@ func RoundCmd(cdc *wire.Codec) *cobra.Command {
 	}
 
 	cmd.Flags().Int64(flagAmount, 0, "how many number to generate on this round")
-	cmd.Flags().String(flagRoundMemo, "", "memo to this round")
+
+	return cmd
+}
+
+var flagTargetAddress = "target"
+
+func ResultCmd(cdc *wire.Codec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "result",
+		Short: "fetch result",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().
+				WithCodec(cdc).
+				WithLogger(os.Stdout).
+				WithAccountDecoder(lottery.GetAccountDecoder(cdc))
+
+			bech32addr := viper.GetString(flagTargetAddress)
+			target, err := sdk.AccAddressFromBech32(bech32addr)
+			if err != nil {
+				return err
+			}
+
+			res, err := cliCtx.QueryStore(lottery.GetInfoStatusKey(target, cdc), "main")
+			var status int64
+			if err != nil {
+				return err
+			} else if len(res) != 0 {
+				cdc.MustUnmarshalBinary(res, &status)
+			}
+
+			if status != 3 {
+				return fmt.Errorf("round not finish")
+			}
+
+			res, err = cliCtx.QueryStore(lottery.GetInfoSequenceKey(target, cdc), "main")
+			var seq int64
+			if err != nil {
+				return err
+			} else if len(res) != 0 {
+				cdc.MustUnmarshalBinary(res, &seq)
+			}
+
+			res, err = cliCtx.QueryStore(lottery.GetInfoResultKey(target, seq, cdc), "main")
+			var result int64
+			if err != nil {
+				return err
+			} else if len(res) != 0 {
+				cdc.MustUnmarshalBinary(res, &result)
+			}
+
+			fmt.Printf("result is %v", result)
+			return nil
+		},
+	}
+
+	cmd.Flags().String(flagTargetAddress, "", "target address")
 
 	return cmd
 }

@@ -54,6 +54,7 @@ func main() {
 		client.PostCommands(
 			lotterycmd.SetupCmd(cdc),
 			lotterycmd.RoundCmd(cdc),
+			lotterycmd.ResultCmd(cdc),
 			lotterycmd.RunVoterCmd(cdc),
 			votercmd.CreateVoterCmd(cdc),
 			votercmd.RevokeVoterCmd(cdc),
